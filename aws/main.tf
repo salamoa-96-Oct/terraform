@@ -10,15 +10,9 @@ terraform {
 }
 
 provider "aws" {
-  profile = "default"
-  region  = "us-east-2"
+  region  = var.aws_region
+  shared_credentials_file = var.aws_shared_credentials
 }
 
-resource "aws_instance" "app_server" {
-  ami           = "ami-830c94e3"
-  instance_type = "t2.micro"
+################### VPC ########################
 
-  tags = {
-    Name = "ExampleAppServerInstance"
-  }
-}
