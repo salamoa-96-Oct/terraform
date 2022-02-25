@@ -39,11 +39,20 @@ resource "aws_internet_gateway" "mjs-igw" {
   }
 }
 
+/*
+################# eip #################
+resource "aws_eip" "mjs_nat_eip" {
+  vpc = true
+  depends_depends_on = [aws_nat_gateway.mjs-nat.id]
+
+}
+*/
+
 ################# nat gateway ################
 
 resource "aws_nat_gateway" "mjs-nat" {
   connectivity_type = "private"
-  subnet_id         = aws_subnet.private_2.id
+  subnet_id         = aws_subnet.k8s_private_subnet_1.id
 }
 
 ################# Routing table #################
@@ -105,11 +114,64 @@ resource "Security" "mjs_securitygroup" {
 }
 
 #################### Subnet ###################
-resource "aws_subnet" "main" {
-  vpc_id     = aws_vpc.main.id
-  cidr_block = "10.0.1.0/24"
 
+data "aws_availability_zones" "available" {
+  state = "available"
+}
+
+resource "aws_subnet" "k8s_private_subnet_1" {
+  vpc_id                  = aws_vpc.mjs-vpc.id
+  cidr_block              = var.aws_vpc_subnet_cidrs["private_1"]
+  availability_zone       = data.aws_availability_zones.available.names[0]
   tags = {
-    Name = "pub-subnet-mjs"
+    Owner   = "${var.owner}"
+    Name    = "tas-private-subnet-1"
+    Service = "k8s_example"
   }
 }
+
+resource "aws_subnet" "k8s_public_subnet_1" {
+  vpc_id                  = aws_vpc.mjs-vpc.id
+  cidr_block              = var.aws_vpc_subnet_cidrs["public_1"]
+  map_public_ip_on_launch = true
+  availability_zone       = data.aws_availability_zones.available.names[0]
+  tags = {
+    Owner   = "${var.owner}"
+    Name    = "tas-public-subnet-1"
+    Service = "k8s_example"
+  }
+}
+
+resource "aws_subnet" "k8s_private_subnet_2" {
+  vpc_id                  = aws_vpc.mjs-vpc.id
+  cidr_block              = var.aws_vpc_subnet_cidrs["private_2"]
+  availability_zone       = data.aws_availability_zones.available.names[2]
+  tags = {
+    Owner   = "${var.owner}"
+    Name    = "tas-private-subnet-2"
+    Service = "k8s_example"
+  }
+}
+
+resource "aws_subnet" "k8s_public_subnet_2" {
+  vpc_id                  = aws_vpc.mjs-vpc.id
+  cidr_block              = var.aws_vpc_subnet_cidrs["public_2"]
+  map_public_ip_on_launch = true
+  availability_zone       = data.aws_availability_zones.available.names[2]
+  tags = {
+    Owner   = "${var.owner}"
+    Name    = "tas-public-subnet-2"
+    Service = "k8s_example"
+  }
+}
+
+resource "aws_route_table_association" "k8s_public1_association" {
+  subnet_id      = aws_subnet.k8s_public_subnet_1.id
+  route_table_id = aws_route_table.mjs_public_rt.id
+}
+
+resource "aws_route_table_association" "k8s_private1_association" {
+  subnet_id      = aws_subnet.k8s_public_subnet_2.id
+  route_table_id = aws_route_table.mjs_public_rt.id
+}
+
