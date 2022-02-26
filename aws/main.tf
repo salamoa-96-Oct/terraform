@@ -88,7 +88,7 @@ resource "aws_route_table" "mjs_pri_rt" {
 }
 
 ################## Security Group ######################
-resource "Security" "mjs_securitygroup" {
+resource "aws_security_group" "mjs_securitygroup" {
   name = "mjs_securitygroup"
   description = "Test_mjs"
   vpc_id = aws_vpc.mjs-vpc.id
@@ -175,3 +175,8 @@ resource "aws_route_table_association" "k8s_private1_association" {
   route_table_id = aws_route_table.mjs_public_rt.id
 }
 
+############### key Pair ################
+resource "aws_key_pair" "aws_key" {
+  key_name = var.ssh_key_name
+  public_key = file(format("%s/%s.pub",var.ssh_key_path,var.ssh_key_name)) 
+}
