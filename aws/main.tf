@@ -22,8 +22,8 @@ resource "aws_vpc" "mjs-vpc" {
   enable_dns_support   = true
 
   tags = {
-    Owner = "${var.owner}"
-    Name = "mjs_vpc"
+    Owner   = "${var.owner}"
+    Name    = "mjs_vpc"
     Service = "k8s_mjs"
   }
 }
@@ -33,31 +33,29 @@ resource "aws_internet_gateway" "mjs-igw" {
   vpc_id = aws_vpc.mjs-vpc.id
 
   tags = {
-    Owner = mjs
-    Name = "mjs_igw"
+    Owner   = "${var.owner}"
+    Name    = "mjs_igw"
     Service = "k8s_mjs"
   }
 }
 
-/*
+
 ################# eip #################
-resource "aws_eip" "mjs_nat_eip" {
-  vpc = true
-  depends_depends_on = [aws_nat_gateway.mjs-nat.id]
-
+resource "aws_eip" "lb" {
+  instance = aws_instance.web.id
+  vpc      = true
 }
-*/
-
+/*
 ################# nat gateway ################
-
 resource "aws_nat_gateway" "mjs-nat" {
   connectivity_type = "private"
   subnet_id         = aws_subnet.k8s_private_subnet_1.id
 }
+*/
 
 ################# Routing table #################
 
-resource "aws_route_table" "mjs_public_rt" {
+resource "aws_route_table" "mjs-public-rt" {
   vpc_id = aws_vpc.mjs-vpc.id
 
   route {
@@ -66,30 +64,29 @@ resource "aws_route_table" "mjs_public_rt" {
   }
 
   tags = {
-    Owner = mjs
+    Owner = "mjs"
     Name = "mjs_public_rt"
     Service = "k8s_mjs"
   }
 }
 
-resource "aws_route_table" "mjs_pri_rt" {
+resource "aws_route_table" "mjs-pri-rt" {
   vpc_id = aws_vpc.mjs-vpc.id
 
   route {
-    cidr_block = "::/0"
-    gateway_id = aws_nat_gateway.mjs-nat.id
+    cidr_block = "0.0.0.0/0"
   }
 
   tags = {
-    Owner = mjs
+    Owner = "mjs"
     Name = "mjs_pri_rt"
     Service = "k8s_mjs"
   }
 }
 
 ################## Security Group ######################
-resource "aws_security_group" "mjs_securitygroup" {
-  name = "mjs_securitygroup"
+resource "aws_security_group" "mjs-securitygroup" {
+  name = "mjs-securitygroup"
   description = "Test_mjs"
   vpc_id = aws_vpc.mjs-vpc.id
   
@@ -165,19 +162,28 @@ resource "aws_subnet" "k8s_public_subnet_2" {
   }
 }
 
-resource "aws_route_table_association" "k8s_public1_association" {
+############### Routung table association #############
+
+resource "aws_route_table_association" "k8s_public_association" {
   subnet_id      = aws_subnet.k8s_public_subnet_1.id
-  route_table_id = aws_route_table.mjs_public_rt.id
+  route_table_id = aws_route_table.mjs-public-rt.id
 }
-
-resource "aws_route_table_association" "k8s_private1_association" {
+resource "aws_route_table_association" "k8s_public_association" {
   subnet_id      = aws_subnet.k8s_public_subnet_2.id
-  route_table_id = aws_route_table.mjs_public_rt.id
+  route_table_id = aws_route_table.mjs-public-rt.id
 }
-
+resource "aws_route_table_association" "k8s_private_association" {
+  subnet_id      = aws_subnet.k8s_private_subnet_0.id
+  route_table_id = aws_route_table.mjs-pri-rt.id
+}
+resource "aws_route_table_association" "k8s_private_association" {
+  subnet_id      = aws_subnet.k8s_private_subnet_1.id
+  route_table_id = aws_route_table.mjs-pri-rt.id
+}
 ############### key Pair ################
 resource "aws_key_pair" "aws_key" {
   key_name = var.ssh_key_name
   public_key = file(format("%s/%s.pub",var.ssh_key_path,var.ssh_key_name)) 
 }
 
+################ EKS 구축 ##################
