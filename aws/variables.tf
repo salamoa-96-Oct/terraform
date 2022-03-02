@@ -21,5 +21,17 @@ variable "instance_type" {
 }
 
 variable "owner" {
-  default = "Kubernetes"
+  default = "mjs"
+}
+
+variable "subnet_cidrs_public" {
+  description = "Subnet CIDRs for public subnets (length must match configured availability_zones)"
+  default = ["10.0.10.0/24", "10.0.20.0/24"]
+  type = "list"
+}
+
+variable "availability_zones" {
+  description = "AZs in this region to use"
+  default = ["us-east-1a", "us-east-1c"]
+  type = "list"
 }

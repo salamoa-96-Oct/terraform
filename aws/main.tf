@@ -119,7 +119,7 @@ data "aws_availability_zones" "available" {
 resource "aws_subnet" "k8s_private_subnet_1" {
   vpc_id                  = aws_vpc.mjs-vpc.id
   cidr_block              = var.aws_vpc_subnet_cidrs["private_1"]
-  availability_zone       = data.aws_availability_zones.available.names[0]
+  availability_zone       = "${data.aws_availability_zones.available.names[0]}"
   tags = {
     Owner   = "${var.owner}"
     Name    = "tas-private-subnet-1"
@@ -131,7 +131,7 @@ resource "aws_subnet" "k8s_public_subnet_1" {
   vpc_id                  = aws_vpc.mjs-vpc.id
   cidr_block              = var.aws_vpc_subnet_cidrs["public_1"]
   map_public_ip_on_launch = true
-  availability_zone       = data.aws_availability_zones.available.names[0]
+  availability_zone       = "${data.aws_availability_zones.available.names[0]}"
   tags = {
     Owner   = "${var.owner}"
     Name    = "tas-public-subnet-1"
@@ -142,7 +142,7 @@ resource "aws_subnet" "k8s_public_subnet_1" {
 resource "aws_subnet" "k8s_private_subnet_2" {
   vpc_id                  = aws_vpc.mjs-vpc.id
   cidr_block              = var.aws_vpc_subnet_cidrs["private_2"]
-  availability_zone       = data.aws_availability_zones.available.names[2]
+  availability_zone       = "${data.aws_availability_zones.available.names[1]}"
   tags = {
     Owner   = "${var.owner}"
     Name    = "tas-private-subnet-2"
@@ -154,7 +154,7 @@ resource "aws_subnet" "k8s_public_subnet_2" {
   vpc_id                  = aws_vpc.mjs-vpc.id
   cidr_block              = var.aws_vpc_subnet_cidrs["public_2"]
   map_public_ip_on_launch = true
-  availability_zone       = data.aws_availability_zones.available.names[2]
+  availability_zone       = "${data.aws_availability_zones.available.names[1]}"
   tags = {
     Owner   = "${var.owner}"
     Name    = "tas-public-subnet-2"
