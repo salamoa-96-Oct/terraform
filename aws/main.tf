@@ -180,3 +180,4 @@ resource "aws_key_pair" "aws_key" {
   key_name = var.ssh_key_name
   public_key = file(format("%s/%s.pub",var.ssh_key_path,var.ssh_key_name)) 
 }
+

@@ -1,4 +1,4 @@
-aws_region   = "us-east-2"
+aws_region   = "us-east-1"
 aws_vpc_cidr = "10.0.0.0/16"
 aws_vpc_subnet_cidrs = {
   public_1  = "10.0.1.0/24"
@@ -7,7 +7,7 @@ aws_vpc_subnet_cidrs = {
   private_2 = "10.0.4.0/24"
 }
 
-ssh_key_name        = "cluster-builder-key"
+ssh_key_name        = "gantry-test-key"
 ssh_public_key_path = "~/.ssh"
 
 instance_type       = "t2.micro"
