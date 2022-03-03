@@ -187,3 +187,8 @@ resource "aws_key_pair" "aws_key" {
 }
 
 ################ EKS 구축 ##################
+
+resource "aws_instance" "eks-bastion" {
+  
+  
+}
