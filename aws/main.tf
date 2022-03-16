@@ -45,6 +45,7 @@ resource "aws_eip" "lb" {
   instance = aws_instance.web.id
   vpc      = true
 }
+
 /*
 ################# nat gateway ################
 resource "aws_nat_gateway" "mjs-nat" {
@@ -59,7 +60,7 @@ resource "aws_route_table" "mjs-public-rt" {
   vpc_id = aws_vpc.mjs-vpc.id
 
   route {
-    cidr_block = "::/0"
+    cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.mjs-igw.id
   }
 
@@ -189,6 +190,6 @@ resource "aws_key_pair" "aws_key" {
 ################ EKS 구축 ##################
 
 resource "aws_instance" "eks-bastion" {
-  
+
   
 }
