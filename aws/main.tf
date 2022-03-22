@@ -228,9 +228,9 @@ resource "aws_instance" "mjs-bastion" {
 }
 
 ################ EKS 구축 ##################
-resource "aws_eks_cluster" "example" {
-  name     = "example"
-  role_arn = aws_iam_role.example.arn
+resource "aws_eks_cluster" "mjs-terraform-eks" {
+  name     = "mjs-terraform-eks"
+  role_arn = aws_iam_role.mjs-eks-iam.arn
 
   vpc_config {
     subnet_ids = [aws_subnet.example1.id, aws_subnet.example2.id]
@@ -253,8 +253,8 @@ output "kubeconfig-certificate-authority-data" {
 }
 
 ################# IAM Role for EKS Cluster #################
-resource "aws_iam_role" "example" {
-  name = "eks-cluster-example"
+resource "aws_iam_role" "mjs-eks-iam" {
+  name = "mjs-eks"
 
   assume_role_policy = <<POLICY
 {
@@ -344,4 +344,78 @@ data "aws_iam_policy_document" "example_assume_role_policy" {
 resource "aws_iam_role" "example" {
   assume_role_policy = data.aws_iam_policy_document.example_assume_role_policy.json
   name               = "example"
+}
+
+################### EKS Node-Group ########################
+resource "aws_eks_node_group" "example" {
+  cluster_name    = aws_eks_cluster.example.name
+  node_group_name = "example"
+  node_role_arn   = aws_iam_role.example.arn
+  subnet_ids      = aws_subnet.example[*].id
+
+  scaling_config {
+    desired_size = 1
+    max_size     = 1
+    min_size     = 1
+  }
+
+  update_config {
+    max_unavailable = 2
+  }
+
+  # Ensure that IAM Role permissions are created before and deleted after EKS Node Group handling.
+  # Otherwise, EKS will not be able to properly delete EC2 Instances and Elastic Network Interfaces.
+  depends_on = [
+    aws_iam_role_policy_attachment.example-AmazonEKSWorkerNodePolicy,
+    aws_iam_role_policy_attachment.example-AmazonEKS_CNI_Policy,
+    aws_iam_role_policy_attachment.example-AmazonEC2ContainerRegistryReadOnly,
+  ]
+}
+
+################### EKS Node-Group IAM-Role ########################
+resource "aws_iam_role" "example" {
+  name = "eks-node-group-example"
+
+  assume_role_policy = jsonencode({
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+    }]
+    Version = "2012-10-17"
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "example-AmazonEKSWorkerNodePolicy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  role       = aws_iam_role.example.name
+}
+
+resource "aws_iam_role_policy_attachment" "example-AmazonEKS_CNI_Policy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  role       = aws_iam_role.example.name
+}
+
+resource "aws_iam_role_policy_attachment" "example-AmazonEC2ContainerRegistryReadOnly" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  role       = aws_iam_role.example.name
+}
+
+##################### Subnet for EKS Node Group ##################
+data "aws_availability_zones" "available" {
+  state = "available"
+}
+
+resource "aws_subnet" "example" {
+  count = 2
+
+  availability_zone = data.aws_availability_zones.available.names[count.index]
+  cidr_block        = cidrsubnet(aws_vpc.example.cidr_block, 8, count.index)
+  vpc_id            = aws_vpc.example.id
+
+  tags = {
+    "kubernetes.io/cluster/${aws_eks_cluster.example.name}" = "shared"
+  }
 }
