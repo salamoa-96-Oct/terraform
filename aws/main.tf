@@ -40,13 +40,13 @@ resource "aws_internet_gateway" "mjs-igw" {
   }
 }
 
-/*
+
 ################# eip #################
-resource "aws_eip" "lb" {
-  instance = aws_instance.web.id
+resource "aws_eip" "bastion-eip" {
+  instance = aws_instance.mjs-bastion.id
   vpc      = true
 }
-*/
+
 
 ################# nat gateway ################
 resource "aws_nat_gateway" "mjs-nat" {
@@ -109,7 +109,26 @@ resource "aws_security_group" "mjs-securitygroup" {
     Name = "allow_Access"
   }
 }
+resource "aws_security_group" "bastion_security_group" {
+  name        = "${var.ec2_name}-bastion-sg"
+  description = "Security Group for ${var.ec2_name} Bastion Host"
+  vpc_id      = aws_vpc.mjs-vpc.id
 
+  # --- SSH ---
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = -1
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
 #################### Subnet ###################
 
 data "aws_availability_zones" "available" {
@@ -187,11 +206,25 @@ resource "aws_key_pair" "aws_key" {
 }
 
 ############### EC2 ##################
-resource "aws_instance" "name" {sd
-  
+resource "aws_instance" "mjs-bastion" {
+  ami           = var.instance_ami
+  instance_type = var.instance_type
+  key_name      = var.ssh_key_name
+
+  associate_public_ip_address = true
+
+  vpc_security_group_ids = ["${aws_security_group.bastion_security_group.id}"]
+  subnet_id              = aws_subnet.k8s_public_subnet_1.id
+
+  /*root_block_device {
+    volume_type           = "gp2"
+    volume_size           = "10"
+    delete_on_termination = true
+  }
+*/
+  tags = {
+    Name = "${var.ec2_name}-bastion"
+  }
 }
-
-
-
 
 ################ EKS 구축 ##################

@@ -41,3 +41,9 @@ variable "availability_zones" {
   default = ["us-east-1a", "us-east-1c"]
   type = list
 }
+
+variable "ec2_name" {
+  description = "ec2-name"
+  defaudefault = "mjs-bastion"
+  
+}
