@@ -47,13 +47,13 @@ resource "aws_eip" "lb" {
   vpc      = true
 }
 */
-/*
+
 ################# nat gateway ################
 resource "aws_nat_gateway" "mjs-nat" {
   connectivity_type = "private"
   subnet_id         = aws_subnet.k8s_private_subnet_1.id
 }
-*/
+
 
 ################# Routing table #################
 
@@ -75,9 +75,7 @@ resource "aws_route_table" "mjs-public-rt" {
 resource "aws_route_table" "mjs-pri-rt" {
   vpc_id = aws_vpc.mjs-vpc.id
 
-  route {
-    cidr_block = "0.0.0.0/0"
-  }
+  route = []
 
   tags = {
     Owner = "mjs"
@@ -179,7 +177,7 @@ resource "aws_route_table_association" "k8s_private_association_1" {
   route_table_id = aws_route_table.mjs-pri-rt.id
 }
 resource "aws_route_table_association" "k8s_private_association_2" {
-  subnet_id      = aws_subnet.k8s_private_subnet_2
+  subnet_id      = aws_subnet.k8s_private_subnet_2.id
   route_table_id = aws_route_table.mjs-pri-rt.id
 }
 ############### key Pair ################
