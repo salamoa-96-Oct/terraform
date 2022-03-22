@@ -44,7 +44,5 @@ variable "availability_zones" {
 
 variable "ec2_name" {
   description = "ec2-name"
-  defaudefault = "mjs-bastion"
-  
+  default = "mjs-bastion"
 }
-
