@@ -186,4 +186,12 @@ resource "aws_key_pair" "aws_key" {
   public_key = file(format("%s/%s.pub",var.ssh_key_path,var.ssh_key_name)) 
 }
 
+############### EC2 ##################
+resource "aws_instance" "name" {sd
+  
+}
+
+
+
+
 ################ EKS 구축 ##################
