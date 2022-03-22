@@ -28,6 +28,7 @@ resource "aws_vpc" "mjs-vpc" {
   }
 }
 
+
 ################## IGW ######################
 resource "aws_internet_gateway" "mjs-igw" {
   vpc_id = aws_vpc.mjs-vpc.id
@@ -39,13 +40,13 @@ resource "aws_internet_gateway" "mjs-igw" {
   }
 }
 
-
+/*
 ################# eip #################
 resource "aws_eip" "lb" {
   instance = aws_instance.web.id
   vpc      = true
 }
-
+*/
 /*
 ################# nat gateway ################
 resource "aws_nat_gateway" "mjs-nat" {
@@ -165,20 +166,20 @@ resource "aws_subnet" "k8s_public_subnet_2" {
 
 ############### Routung table association #############
 
-resource "aws_route_table_association" "k8s_public_association" {
+resource "aws_route_table_association" "k8s_public_association_1" {
   subnet_id      = aws_subnet.k8s_public_subnet_1.id
   route_table_id = aws_route_table.mjs-public-rt.id
 }
-resource "aws_route_table_association" "k8s_public_association" {
+resource "aws_route_table_association" "k8s_public_association_2" {
   subnet_id      = aws_subnet.k8s_public_subnet_2.id
   route_table_id = aws_route_table.mjs-public-rt.id
 }
-resource "aws_route_table_association" "k8s_private_association" {
-  subnet_id      = aws_subnet.k8s_private_subnet_0.id
+resource "aws_route_table_association" "k8s_private_association_1" {
+  subnet_id      = aws_subnet.k8s_private_subnet_1.id
   route_table_id = aws_route_table.mjs-pri-rt.id
 }
-resource "aws_route_table_association" "k8s_private_association" {
-  subnet_id      = aws_subnet.k8s_private_subnet_1.id
+resource "aws_route_table_association" "k8s_private_association_2" {
+  subnet_id      = aws_subnet.k8s_private_subnet_2
   route_table_id = aws_route_table.mjs-pri-rt.id
 }
 ############### key Pair ################
@@ -188,8 +189,3 @@ resource "aws_key_pair" "aws_key" {
 }
 
 ################ EKS 구축 ##################
-
-resource "aws_instance" "eks-bastion" {
-
-  
-}
