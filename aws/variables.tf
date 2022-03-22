@@ -47,3 +47,4 @@ variable "ec2_name" {
   defaudefault = "mjs-bastion"
   
 }
+
