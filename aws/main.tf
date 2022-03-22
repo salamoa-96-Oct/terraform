@@ -320,7 +320,7 @@ resource "aws_iam_openid_connect_provider" "mjs-eks-provider" {
   url             = aws_eks_cluster.mjs-terraform-eks.identity[0].oidc[0].issuer
 }
 
-data "aws_iam_policy_document" "example_assume_role_policy" {
+data "aws_iam_policy_document" "mjs_assume_role_policy" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
     effect  = "Allow"
@@ -338,27 +338,27 @@ data "aws_iam_policy_document" "example_assume_role_policy" {
   }
 }
 
-resource "aws_iam_role" "example" {
-  assume_role_policy = data.aws_iam_policy_document.example_assume_role_policy.json
-  name               = "example"
+resource "aws_iam_role" "mjs_assume_role" {
+  assume_role_policy = data.aws_iam_policy_document.mjs_assume_role_policy.json
+  name               = "mjs_assume_role"
 }
 
 
 ################### EKS Node-Group ########################
-resource "aws_eks_node_group" "example" {
-  cluster_name    = aws_eks_cluster.example.name
-  node_group_name = "example"
+resource "aws_eks_node_group" "mjs-eks-node-group" {
+  cluster_name    = aws_eks_cluster.mjs-terraform-eks.name
+  node_group_name = "mjs-eks-node-group"
   node_role_arn   = aws_iam_role.example.arn
   subnet_ids      = aws_subnet.example[*].id
 
   scaling_config {
-    desired_size = 1
-    max_size     = 1
-    min_size     = 1
+    desired_size = 3
+    max_size     = 3
+    min_size     = 3
   }
 
   update_config {
-    max_unavailable = 2
+    max_unavailable = 3
   }
 
   # Ensure that IAM Role permissions are created before and deleted after EKS Node Group handling.

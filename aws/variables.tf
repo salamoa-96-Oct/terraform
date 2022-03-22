@@ -46,3 +46,8 @@ variable "ec2_name" {
   description = "ec2-name"
   default = "mjs-bastion"
 }
+
+variable "cluster_name" {
+  default = "mjs-terraform-eks"
+  type    = string
+}
