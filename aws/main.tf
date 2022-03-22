@@ -222,6 +222,7 @@ resource "aws_instance" "mjs-bastion" {
     delete_on_termination = true
   }
 */
+
   tags = {
     Name = "${var.ec2_name}-bastion"
   }
@@ -230,26 +231,40 @@ resource "aws_instance" "mjs-bastion" {
 ################ EKS 구축 ##################
 resource "aws_eks_cluster" "mjs-terraform-eks" {
   name     = "mjs-terraform-eks"
+  version  = "1.21"
   role_arn = aws_iam_role.mjs-eks-iam.arn
 
   vpc_config {
-    subnet_ids = [aws_subnet.example1.id, aws_subnet.example2.id]
+    subnet_ids = [aws_subnet.k8s_private_subnet_1.id, aws_subnet.k8s_private_subnet_2.id]
+    security_group_ids = "mjs-securitygroup"
+    endpoint_private_access = true
+    endpoint_public_access = true
+    public_access_cidrs = "0.0.0.0/0"
   }
-
+  kubernetes_network_config {
+    service_ipv4_cidr = "172.20.0.0/16"
+  }
+  timeouts {
+    create = ""
+    update = ""
+    delete = "" 
+  }
   # Ensure that IAM Role permissions are created before and deleted after EKS Cluster handling.
   # Otherwise, EKS will not be able to properly delete EKS managed EC2 infrastructure such as Security Groups.
   depends_on = [
-    aws_iam_role_policy_attachment.example-AmazonEKSClusterPolicy,
-    aws_iam_role_policy_attachment.example-AmazonEKSVPCResourceController,
+    aws_iam_role_policy_attachment.mjs-AmazonEKSClusterPolicy,
+    aws_iam_role_policy_attachment.mjs-AmazonEKSVPCResourceController,
+    aws_cloudwatch_log_group.mjs-eks-cluster-log,
   ]
 }
-
+  enabled_cluster_log_types = ["api", "audit"]
+  name                      = var.cluster_name
 output "endpoint" {
-  value = aws_eks_cluster.example.endpoint
+  value = aws_eks_cluster.mjs-terraform-eks.endpoint
 }
 
 output "kubeconfig-certificate-authority-data" {
-  value = aws_eks_cluster.example.certificate_authority[0].data
+  value = aws_eks_cluster.mjs-terraform-eks.certificate_authority[0].data
 }
 
 ################# IAM Role for EKS Cluster #################
@@ -272,55 +287,37 @@ resource "aws_iam_role" "mjs-eks-iam" {
 POLICY
 }
 
-resource "aws_iam_role_policy_attachment" "example-AmazonEKSClusterPolicy" {
+resource "aws_iam_role_policy_attachment" "mjs-AmazonEKSClusterPolicy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
-  role       = aws_iam_role.example.name
+  role       = aws_iam_role.mjs-eks-iam.name
 }
 
 # Optionally, enable Security Groups for Pods
 # Reference: https://docs.aws.amazon.com/eks/latest/userguide/security-groups-for-pods.html
-resource "aws_iam_role_policy_attachment" "example-AmazonEKSVPCResourceController" {
+resource "aws_iam_role_policy_attachment" "mjs-AmazonEKSVPCResourceController" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
-  role       = aws_iam_role.example.name
+  role       = aws_iam_role.mjs-eks-iam.name
 }
 
 ##################### Control Plane Logging ##################
-variable "cluster_name" {
-  default = "example"
-  type    = string
-}
-
-resource "aws_eks_cluster" "example" {
-  depends_on = [aws_cloudwatch_log_group.example]
-
-  enabled_cluster_log_types = ["api", "audit"]
-  name                      = var.cluster_name
-
-  # ... other configuration ...
-}
-
-resource "aws_cloudwatch_log_group" "example" {
+resource "aws_cloudwatch_log_group" "mjs-cloudwatch" {
   # The log group name format is /aws/eks/<cluster-name>/cluster
   # Reference: https://docs.aws.amazon.com/eks/latest/userguide/control-plane-logs.html
   name              = "/aws/eks/${var.cluster_name}/cluster"
-  retention_in_days = 7
+  retention_in_days = 3
 
   # ... potentially other configuration ...
 }
 
 #################### IAM Roles for Service Account ##################
-resource "aws_eks_cluster" "example" {
-  # ... other configuration ...
+data "tls_certificate" "mjs-eks-tls" {
+  url = aws_eks_cluster.mjs-terraform-eks.identity[0].oidc[0].issuer
 }
 
-data "tls_certificate" "example" {
-  url = aws_eks_cluster.example.identity[0].oidc[0].issuer
-}
-
-resource "aws_iam_openid_connect_provider" "example" {
+resource "aws_iam_openid_connect_provider" "mjs-eks-provider" {
   client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = [data.tls_certificate.example.certificates[0].sha1_fingerprint]
-  url             = aws_eks_cluster.example.identity[0].oidc[0].issuer
+  thumbprint_list = [data.tls_certificate.mjs-terraform-eks.certificates[0].sha1_fingerprint]
+  url             = aws_eks_cluster.mjs-terraform-eks.identity[0].oidc[0].issuer
 }
 
 data "aws_iam_policy_document" "example_assume_role_policy" {
@@ -330,12 +327,12 @@ data "aws_iam_policy_document" "example_assume_role_policy" {
 
     condition {
       test     = "StringEquals"
-      variable = "${replace(aws_iam_openid_connect_provider.example.url, "https://", "")}:sub"
+      variable = "${replace(aws_iam_openid_connect_provider.mjs-eks-provider.url, "https://", "")}:sub"
       values   = ["system:serviceaccount:kube-system:aws-node"]
     }
 
     principals {
-      identifiers = [aws_iam_openid_connect_provider.example.arn]
+      identifiers = [aws_iam_openid_connect_provider.mjs-eks-provider.arn]
       type        = "Federated"
     }
   }
@@ -345,6 +342,7 @@ resource "aws_iam_role" "example" {
   assume_role_policy = data.aws_iam_policy_document.example_assume_role_policy.json
   name               = "example"
 }
+
 
 ################### EKS Node-Group ########################
 resource "aws_eks_node_group" "example" {
