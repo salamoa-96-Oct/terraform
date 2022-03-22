@@ -7,7 +7,8 @@ aws_vpc_subnet_cidrs = {
   private_2 = "10.0.200.0/24"
 }
 
-ssh_key_name        = "gantry-test-key"
+ssh_key_name        = "terraform-test-key"
+ssh_key_path        = "~/.ssh"
 ssh_public_key_path = "~/.ssh"
 
 instance_type       = "t2.micro"

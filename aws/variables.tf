@@ -30,6 +30,12 @@ variable "subnet_cidrs_public" {
   type = list
 }
 
+variable "subnet_cidrs_pri" {
+  description = "Subnet CIDRs for public subnets (length must match configured availability_zones)"
+  default = ["10.0.100.0/24", "10.0.200.0/24"]
+  type = list
+}
+
 variable "availability_zones" {
   description = "AZs in this region to use"
   default = ["us-east-1a", "us-east-1c"]
