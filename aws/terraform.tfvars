@@ -12,4 +12,4 @@ ssh_key_path        = "~/.ssh"
 ssh_public_key_path = "~/.ssh"
 
 instance_type       = "t2.micro"
-instance_ami        = "ami-0454bb2fefc7de534"
+instance_ami        = "ami-04505e74c0741db8d"

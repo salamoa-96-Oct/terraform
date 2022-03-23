@@ -143,7 +143,8 @@ resource "aws_subnet" "k8s_private_subnet_1" {
     Owner   = "${var.owner}"
     Name    = "tas-private-subnet-1"
     Service = "k8s_example"
-    "kubernetes.io/cluster/${aws_eks_cluster.mjs-terraform-eks.name}" = "shared"
+    "kubernetes.io/cluster/mjs-terraform-eks" = "shared"
+    #"kubernetes.io/cluster/${aws_eks_cluster.example.name}" = "shared"
   }
 }
 
@@ -167,7 +168,8 @@ resource "aws_subnet" "k8s_private_subnet_2" {
     Owner   = "${var.owner}"
     Name    = "tas-private-subnet-2"
     Service = "k8s_example"
-    "kubernetes.io/cluster/${aws_eks_cluster.mjs-terraform-eks.name}" = "shared"
+    "kubernetes.io/cluster/mjs-terraform-eks" = "shared"
+    #"kubernetes.io/cluster/${aws_eks_cluster.example.name}" = "shared"
   }
 }
 
@@ -249,7 +251,7 @@ resource "aws_eks_cluster" "mjs-terraform-eks" {
   timeouts {
     create = "1h"
     update = "1h"
-    delete = "15m" 
+    delete = "30m" 
   }
   # Ensure that IAM Role permissions are created before and deleted after EKS Cluster handling.
   # Otherwise, EKS will not be able to properly delete EKS managed EC2 infrastructure such as Security Groups.
@@ -356,9 +358,12 @@ resource "aws_eks_node_group" "mjs-eks-node-group" {
   #instance_types  = "t2.xlarge"
 
   scaling_config {
-    desired_size = 3
-    max_size     = 3
+    desired_size = 1
+    max_size     = 1
     min_size     = 3
+  }
+  labels = {
+    "role" = "mjs-eks-node-group"
   }
 
   update_config {
@@ -372,6 +377,10 @@ resource "aws_eks_node_group" "mjs-eks-node-group" {
     aws_iam_role_policy_attachment.mjs-node-AmazonEKS_CNI_Policy,
     aws_iam_role_policy_attachment.mjs-node-AmazonEC2ContainerRegistryReadOnly,
   ]
+  tags = {
+    "Name" = "${aws_eks_cluster.mjs-terraform-eks.name}-mjs-eks-node-group-Node"
+    "kubernetes.io/cluster/${aws_eks_cluster.mjs-terraform-eks.name}" = "owned"
+  }
 }
 
 ################### EKS Node-Group IAM-Role ########################
