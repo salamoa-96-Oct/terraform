@@ -13,7 +13,7 @@ variable "ssh_key_name" {}
 # Instances ----------------------------------------
 variable "instance_ami" {
   description = "ami of instances"
-  default     = "ami-0454bb2fefc7de534"
+  default     = "ami-0c02fb55956c7d316"
 }
 
 variable "instance_type" {

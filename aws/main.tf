@@ -143,6 +143,7 @@ resource "aws_subnet" "k8s_private_subnet_1" {
     Owner   = "${var.owner}"
     Name    = "tas-private-subnet-1"
     Service = "k8s_example"
+    "kubernetes.io/cluster/${aws_eks_cluster.mjs-terraform-eks.name}" = "shared"
   }
 }
 
@@ -166,6 +167,7 @@ resource "aws_subnet" "k8s_private_subnet_2" {
     Owner   = "${var.owner}"
     Name    = "tas-private-subnet-2"
     Service = "k8s_example"
+    "kubernetes.io/cluster/${aws_eks_cluster.mjs-terraform-eks.name}" = "shared"
   }
 }
 
@@ -245,9 +247,9 @@ resource "aws_eks_cluster" "mjs-terraform-eks" {
     service_ipv4_cidr = "172.20.0.0/16"
   }
   timeouts {
-    create = ""
-    update = ""
-    delete = "" 
+    create = "1h"
+    update = "1h"
+    delete = "15m" 
   }
   # Ensure that IAM Role permissions are created before and deleted after EKS Cluster handling.
   # Otherwise, EKS will not be able to properly delete EKS managed EC2 infrastructure such as Security Groups.
@@ -350,7 +352,7 @@ resource "aws_eks_node_group" "mjs-eks-node-group" {
   cluster_name    = aws_eks_cluster.mjs-terraform-eks.name
   node_group_name = "mjs-eks-node-group"
   node_role_arn   = aws_iam_role.eks-terraform-node-role.arn
-  subnet_ids      = aws_subnet.k8s_private_subnet_1[*].id
+  subnet_ids      = [aws_subnet.k8s_private_subnet_1.id, aws_subnet.k8s_private_subnet_2.id]
   #instance_types  = "t2.xlarge"
 
   scaling_config {
@@ -360,7 +362,7 @@ resource "aws_eks_node_group" "mjs-eks-node-group" {
   }
 
   update_config {
-    max_unavailable = 3
+    max_unavailable = 2
   }
 
   # Ensure that IAM Role permissions are created before and deleted after EKS Node Group handling.
@@ -403,6 +405,7 @@ resource "aws_iam_role_policy_attachment" "mjs-node-AmazonEC2ContainerRegistryRe
   role       = aws_iam_role.eks-terraform-node-role.name
 }
 
+/*
 ##################### Subnet for EKS Node Group ##################
 data "aws_availability_zones" "availability_zones" {
   state = "available"
@@ -419,3 +422,4 @@ resource "aws_subnet" "mjs-eks-node-subnet" {
     "kubernetes.io/cluster/${aws_eks_cluster.mjs-terraform-eks.name}" = "shared"
   }
 }
+*/
