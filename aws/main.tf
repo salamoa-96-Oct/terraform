@@ -320,6 +320,7 @@ resource "aws_iam_openid_connect_provider" "mjs-eks-provider" {
   url             = aws_eks_cluster.mjs-terraform-eks.identity[0].oidc[0].issuer
 }
 
+/*            IRSA 전용
 data "aws_iam_policy_document" "mjs_assume_role_policy" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -342,14 +343,14 @@ resource "aws_iam_role" "mjs_assume_role" {
   assume_role_policy = data.aws_iam_policy_document.mjs_assume_role_policy.json
   name               = "mjs_assume_role"
 }
-
+*/
 
 ################### EKS Node-Group ########################
 resource "aws_eks_node_group" "mjs-eks-node-group" {
   cluster_name    = aws_eks_cluster.mjs-terraform-eks.name
   node_group_name = "mjs-eks-node-group"
-  node_role_arn   = aws_iam_role.example.arn
-  subnet_ids      = aws_subnet.example[*].id
+  node_role_arn   = aws_iam_role.eks-terraform-node-role.arn
+  subnet_ids      = aws_subnet.k8s_private_subnet_[*].id
 
   scaling_config {
     desired_size = 3
@@ -364,15 +365,15 @@ resource "aws_eks_node_group" "mjs-eks-node-group" {
   # Ensure that IAM Role permissions are created before and deleted after EKS Node Group handling.
   # Otherwise, EKS will not be able to properly delete EC2 Instances and Elastic Network Interfaces.
   depends_on = [
-    aws_iam_role_policy_attachment.example-AmazonEKSWorkerNodePolicy,
-    aws_iam_role_policy_attachment.example-AmazonEKS_CNI_Policy,
-    aws_iam_role_policy_attachment.example-AmazonEC2ContainerRegistryReadOnly,
+    aws_iam_role_policy_attachment.mjs-node-AmazonEKSWorkerNodePolicy,
+    aws_iam_role_policy_attachment.mjs-node-AmazonEKS_CNI_Policy,
+    aws_iam_role_policy_attachment.mjs-node-AmazonEC2ContainerRegistryReadOnly,
   ]
 }
 
 ################### EKS Node-Group IAM-Role ########################
-resource "aws_iam_role" "example" {
-  name = "eks-node-group-example"
+resource "aws_iam_role" "eks-terraform-node-role" {
+  name = "eks-terraform-node-role"
 
   assume_role_policy = jsonencode({
     Statement = [{
@@ -386,19 +387,19 @@ resource "aws_iam_role" "example" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "example-AmazonEKSWorkerNodePolicy" {
+resource "aws_iam_role_policy_attachment" "mjs-node-AmazonEKSWorkerNodePolicy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
-  role       = aws_iam_role.example.name
+  role       = aws_iam_role.eks-terraform-node-role.name
 }
 
-resource "aws_iam_role_policy_attachment" "example-AmazonEKS_CNI_Policy" {
+resource "aws_iam_role_policy_attachment" "mjs-node-AmazonEKS_CNI_Policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-  role       = aws_iam_role.example.name
+  role       = aws_iam_role.eks-terraform-node-role.name
 }
 
-resource "aws_iam_role_policy_attachment" "example-AmazonEC2ContainerRegistryReadOnly" {
+resource "aws_iam_role_policy_attachment" "mjs-node-AmazonEC2ContainerRegistryReadOnly" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-  role       = aws_iam_role.example.name
+  role       = aws_iam_role.eks-terraform-node-role.name
 }
 
 ##################### Subnet for EKS Node Group ##################
@@ -406,14 +407,14 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
-resource "aws_subnet" "example" {
+resource "aws_subnet" "mjs-eks-node-subnet" {
   count = 2
 
   availability_zone = data.aws_availability_zones.available.names[count.index]
-  cidr_block        = cidrsubnet(aws_vpc.example.cidr_block, 8, count.index)
-  vpc_id            = aws_vpc.example.id
+  cidr_block        = cidrsubnet(aws_vpc.mjs-vpc.cidr_block, 8, count.index)
+  vpc_id            = aws_vpc.mjs-vpc.id
 
   tags = {
-    "kubernetes.io/cluster/${aws_eks_cluster.example.name}" = "shared"
+    "kubernetes.io/cluster/${aws_eks_cluster.mjs-terraform-eks.name}" = "shared"
   }
 }
