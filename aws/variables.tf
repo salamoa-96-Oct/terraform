@@ -51,3 +51,8 @@ variable "cluster_name" {
   default = "mjs-terraform-eks"
   type    = string
 }
+
+variable "enabled_cluster_log_types" {
+  default = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+  type = list
+}

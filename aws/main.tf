@@ -256,9 +256,9 @@ resource "aws_eks_cluster" "mjs-terraform-eks" {
     aws_iam_role_policy_attachment.mjs-AmazonEKSVPCResourceController,
     aws_cloudwatch_log_group.mjs-eks-cluster-log,
   ]
+  
+  enabled_cluster_log_types = var.enabled_cluster_log_types
 }
-  enabled_cluster_log_types = ["api", "audit"]
-  name                      = var.cluster_name
 output "endpoint" {
   value = aws_eks_cluster.mjs-terraform-eks.endpoint
 }
@@ -403,7 +403,7 @@ resource "aws_iam_role_policy_attachment" "mjs-node-AmazonEC2ContainerRegistryRe
 }
 
 ##################### Subnet for EKS Node Group ##################
-data "aws_availability_zones" "available" {
+data "aws_availability_zones" "availability_zones" {
   state = "available"
 }
 
