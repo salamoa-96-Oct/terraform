@@ -236,10 +236,10 @@ resource "aws_eks_cluster" "mjs-terraform-eks" {
 
   vpc_config {
     subnet_ids = [aws_subnet.k8s_private_subnet_1.id, aws_subnet.k8s_private_subnet_2.id]
-    security_group_ids = "mjs-securitygroup"
+    security_group_ids = [aws_security_group.mjs-securitygroup.id]
     endpoint_private_access = true
     endpoint_public_access = true
-    public_access_cidrs = "0.0.0.0/0"
+    public_access_cidrs = var.public_access_cidrs
   }
   kubernetes_network_config {
     service_ipv4_cidr = "172.20.0.0/16"
@@ -254,7 +254,7 @@ resource "aws_eks_cluster" "mjs-terraform-eks" {
   depends_on = [
     aws_iam_role_policy_attachment.mjs-AmazonEKSClusterPolicy,
     aws_iam_role_policy_attachment.mjs-AmazonEKSVPCResourceController,
-    aws_cloudwatch_log_group.mjs-eks-cluster-log,
+    aws_cloudwatch_log_group.mjs-cloudwatch,
   ]
   
   enabled_cluster_log_types = var.enabled_cluster_log_types
@@ -316,7 +316,7 @@ data "tls_certificate" "mjs-eks-tls" {
 
 resource "aws_iam_openid_connect_provider" "mjs-eks-provider" {
   client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = [data.tls_certificate.mjs-terraform-eks.certificates[0].sha1_fingerprint]
+  thumbprint_list = [data.tls_certificate.mjs-eks-tls.certificates[0].sha1_fingerprint]
   url             = aws_eks_cluster.mjs-terraform-eks.identity[0].oidc[0].issuer
 }
 
@@ -350,7 +350,8 @@ resource "aws_eks_node_group" "mjs-eks-node-group" {
   cluster_name    = aws_eks_cluster.mjs-terraform-eks.name
   node_group_name = "mjs-eks-node-group"
   node_role_arn   = aws_iam_role.eks-terraform-node-role.arn
-  subnet_ids      = aws_subnet.k8s_private_subnet_[*].id
+  subnet_ids      = aws_subnet.k8s_private_subnet_1[*].id
+  #instance_types  = "t2.xlarge"
 
   scaling_config {
     desired_size = 3

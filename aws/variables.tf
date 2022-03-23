@@ -56,3 +56,9 @@ variable "enabled_cluster_log_types" {
   default = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
   type = list
 }
+
+variable "public_access_cidrs" {
+  default = ["0.0.0.0/0"]
+  type = list
+  
+}
