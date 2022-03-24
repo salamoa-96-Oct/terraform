@@ -252,7 +252,7 @@ resource "aws_eks_cluster" "mjs-terraform-eks" {
   timeouts {
     create = "1h"
     update = "1h"
-    delete = "30m" 
+    delete = "30m"
   }
   # Ensure that IAM Role permissions are created before and deleted after EKS Cluster handling.
   # Otherwise, EKS will not be able to properly delete EKS managed EC2 infrastructure such as Security Groups.
@@ -357,7 +357,7 @@ apiVersion: v1
 clusters:
 - cluster:
     server: ${aws_eks_cluster.mjs-terraform-eks.endpoint}
-    certificate-authority-data: ${aws_eks_cluster.mjs-terraform-eks.certificate_authority.0.data}
+    certificate-authority-data: ${aws_eks_cluster.mjs-terraform-eks.certificate_authority[0].data}
   name: kubernetes
 contexts:
 - context:
@@ -423,6 +423,7 @@ resource "aws_eks_node_group" "mjs-eks-node-group" {
     aws_iam_role_policy_attachment.mjs-node-AmazonEKSWorkerNodePolicy,
     aws_iam_role_policy_attachment.mjs-node-AmazonEKS_CNI_Policy,
     aws_iam_role_policy_attachment.mjs-node-AmazonEC2ContainerRegistryReadOnly,
+    aws_iam_role.eks-terraform-node-role.name
   ]
   tags = {
     "Name" = "${aws_eks_cluster.mjs-terraform-eks.name}-mjs-eks-node-group-Node"
@@ -435,13 +436,15 @@ resource "aws_iam_role" "eks-terraform-node-role" {
   name = "eks-terraform-node-role"
 
   assume_role_policy = jsonencode({
-    Statement = [{
+    Statement = [
+    {
       Action = "sts:AssumeRole"
       Effect = "Allow"
       Principal = {
         Service = "ec2.amazonaws.com"
       }
-    }]
+    }
+  ]
     Version = "2012-10-17"
   })
 }
@@ -460,7 +463,12 @@ resource "aws_iam_role_policy_attachment" "mjs-node-AmazonEC2ContainerRegistryRe
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
   role       = aws_iam_role.eks-terraform-node-role.name
 }
-
+/*
+resource "aws_iam_instance_profile" "workeaws_iam_role.eks-terraform-node-role" {
+	name = "kuberkuber-worker"
+	role = aws_iam_role.eks-terraform-node-role.name
+}
+*/
 /*
 ##################### Subnet for EKS Node Group ##################
 data "aws_availability_zones" "availability_zones" {
