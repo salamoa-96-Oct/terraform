@@ -62,3 +62,8 @@ variable "public_access_cidrs" {
   type = list
   
 }
+
+variable "cluster-name" {
+  default = "mjs-terraform-eks"
+  type    = string
+}

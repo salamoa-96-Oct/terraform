@@ -25,6 +25,7 @@ resource "aws_vpc" "mjs-vpc" {
     Owner   = "${var.owner}"
     Name    = "mjs_vpc"
     Service = "k8s_mjs"
+    "kubernetes.io/cluster/${var.cluster-name}" = "shared"
   }
 }
 
@@ -348,6 +349,52 @@ resource "aws_iam_role" "mjs_assume_role" {
   name               = "mjs_assume_role"
 }
 */
+locals {
+  kubeconfig = <<KUBECONFIG
+
+
+apiVersion: v1
+clusters:
+- cluster:
+    server: ${aws_eks_cluster.mjs-terraform-eks.endpoint}
+    certificate-authority-data: ${aws_eks_cluster.mjs-terraform-eks.certificate_authority.0.data}
+  name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    user: aws
+  name: aws
+current-context: aws
+kind: Config
+preferences: {}
+users:
+- name: aws
+  user:
+    exec:
+      apiVersion: client.authentication.k8s.io/v1alpha1
+      command: heptio-authenticator-aws
+      args:
+        - "token"
+        - "-i"
+        - "${var.cluster-name}"
+KUBECONFIG
+}
+
+output "kubeconfig" {
+  value = "${local.kubeconfig}"
+}
+
+/*
+data "aws_ami" "eks-worker" {
+  filter {
+    name   = "name"
+    values = ["eks-worker-*"]
+  }
+
+  most_recent = true
+  owners      = ["000982191218"] # 아마존 계정 ID
+}
+*/
 
 ################### EKS Node-Group ########################
 resource "aws_eks_node_group" "mjs-eks-node-group" {
@@ -358,9 +405,9 @@ resource "aws_eks_node_group" "mjs-eks-node-group" {
   #instance_types  = "t2.xlarge"
 
   scaling_config {
-    desired_size = 1
-    max_size     = 1
-    min_size     = 3
+    desired_size = 2
+    max_size     = 3
+    min_size     = 2
   }
   labels = {
     "role" = "mjs-eks-node-group"
