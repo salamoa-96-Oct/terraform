@@ -52,7 +52,7 @@ resource "aws_eip" "bastion-eip" {
 ################# nat gateway ################
 resource "aws_nat_gateway" "mjs-nat" {
   connectivity_type = "private"
-  subnet_id         = aws_subnet.k8s_private_subnet_1.id
+  subnet_id         = "aws_subnet.k8s_private_subnet_1.id"
 }
 
 
@@ -75,9 +75,10 @@ resource "aws_route_table" "mjs-public-rt" {
 
 resource "aws_route_table" "mjs-pri-rt" {
   vpc_id = aws_vpc.mjs-vpc.id
-
-  route = []
-
+  route {
+    cidr_block = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.mjs-nat.id
+  }
   tags = {
     Owner = "mjs"
     Name = "mjs_pri_rt"
@@ -145,6 +146,7 @@ resource "aws_subnet" "k8s_private_subnet_1" {
     Name    = "tas-private-subnet-1"
     Service = "k8s_example"
     "kubernetes.io/cluster/mjs-terraform-eks" = "shared"
+    "kubernetes.io/role/internal-elb" = "1"
     #"kubernetes.io/cluster/${aws_eks_cluster.example.name}" = "shared"
   }
 }
@@ -156,8 +158,10 @@ resource "aws_subnet" "k8s_public_subnet_1" {
   availability_zone       = "${data.aws_availability_zones.available.names[0]}"
   tags = {
     Owner   = "${var.owner}"
-    Name    = "tas-public-subnet-1"
+    Name    = "tas-publicsubnet-1"
     Service = "k8s_example"
+    "kubernetes.io/role/elb" = "1" 
+    
   }
 }
 
@@ -170,6 +174,7 @@ resource "aws_subnet" "k8s_private_subnet_2" {
     Name    = "tas-private-subnet-2"
     Service = "k8s_example"
     "kubernetes.io/cluster/mjs-terraform-eks" = "shared"
+    "kubernetes.io/role/internal-elb" = "1"
     #"kubernetes.io/cluster/${aws_eks_cluster.example.name}" = "shared"
   }
 }
@@ -183,6 +188,7 @@ resource "aws_subnet" "k8s_public_subnet_2" {
     Owner   = "${var.owner}"
     Name    = "tas-public-subnet-2"
     Service = "k8s_example"
+    "kubernetes.io/role/elb" = "1"
   }
 }
 
@@ -401,8 +407,13 @@ resource "aws_eks_node_group" "mjs-eks-node-group" {
   cluster_name    = aws_eks_cluster.mjs-terraform-eks.name
   node_group_name = "mjs-eks-node-group"
   node_role_arn   = aws_iam_role.eks-terraform-node-role.arn
+  #security_group_ids = aws_security_group.mjs-securitygroup.id
   subnet_ids      = [aws_subnet.k8s_private_subnet_1.id, aws_subnet.k8s_private_subnet_2.id]
   #instance_types  = "t2.xlarge"
+
+  resources {
+    remote_access_security_group_id = "aws_security_group.mjs-securitygroup.id"
+  }
 
   scaling_config {
     desired_size = 2
@@ -423,7 +434,7 @@ resource "aws_eks_node_group" "mjs-eks-node-group" {
     aws_iam_role_policy_attachment.mjs-node-AmazonEKSWorkerNodePolicy,
     aws_iam_role_policy_attachment.mjs-node-AmazonEKS_CNI_Policy,
     aws_iam_role_policy_attachment.mjs-node-AmazonEC2ContainerRegistryReadOnly,
-    aws_iam_role.eks-terraform-node-role.name
+    aws_iam_role.eks-terraform-node-role
   ]
   tags = {
     "Name" = "${aws_eks_cluster.mjs-terraform-eks.name}-mjs-eks-node-group-Node"
@@ -463,12 +474,12 @@ resource "aws_iam_role_policy_attachment" "mjs-node-AmazonEC2ContainerRegistryRe
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
   role       = aws_iam_role.eks-terraform-node-role.name
 }
-/*
-resource "aws_iam_instance_profile" "workeaws_iam_role.eks-terraform-node-role" {
+
+resource "aws_iam_instance_profile" "eks-terraform-node-role" {
 	name = "kuberkuber-worker"
 	role = aws_iam_role.eks-terraform-node-role.name
 }
-*/
+
 /*
 ##################### Subnet for EKS Node Group ##################
 data "aws_availability_zones" "availability_zones" {
