@@ -391,63 +391,6 @@ output "kubeconfig" {
   value = "${local.kubeconfig}"
 }
 
-/*
-data "aws_ami" "latest" {
-  for_each = toset(["1.20", "1.21"])
-
-  owners      = ["000982191218"]
-  most_recent = true
-
-  filter {
-    name = "name"
-    values = [
-      "amazon-eks-node-${each.value}-v*",
-    ]
-  }
-}
-output "latest_instance_ami" {
-  value = {
-    for version, ami in data.aws_ami.latest :
-    version => {
-      id    = ami.id
-      name  = ami.name
-      owner = ami.image_owner_alias
-    }
-  }
-}
-*/
-
-# This data source is included for ease of sample architecture deployment
-# and can be swapped out as necessary.
-data "aws_region" "current" {}
-
-# EKS currently documents this required userdata for EKS worker nodes to
-# properly configure Kubernetes applications on the EC2 instance.
-# We utilize a Terraform local here to simplify Base64 encoding this
-# information into the AutoScaling Launch Configuration.
-# More information: https://docs.aws.amazon.com/eks/latest/userguide/launch-workers.html
-locals {
-  eks-terraform-node-role-userdata = <<USERDATA
-#!/bin/bash
-set -o xtrace
-/etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.mjs-terraform-eks.endpoint}' --b64-cluster-ca '${aws_eks_cluster.mjs-terraform-eks.certificate_authority.0.data}' '${var.cluster-name}'
-USERDATA
-}
-
-resource "aws_launch_configuration" "eks-terraform-node-role" {
-  associate_public_ip_address = true
-  iam_instance_profile        = "${aws_iam_instance_profile.eks-terraform-node-role.name}"
-  image_id                    = "ami-0073aeb06ceb4b0dc"
-  instance_type               = "m4.large"
-  name_prefix                 = "eks-terraform-node-role"
-  security_groups             = [aws_security_group.mjs-securitygroup.id]
-  user_data_base64            = "${base64encode(local.eks-terraform-node-role-userdata)}"
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
 ################### EKS Node-Group ########################
 resource "aws_eks_node_group" "mjs-eks-node-group" {
   cluster_name    = aws_eks_cluster.mjs-terraform-eks.name
@@ -476,32 +419,11 @@ resource "aws_eks_node_group" "mjs-eks-node-group" {
     aws_iam_role_policy_attachment.mjs-node-AmazonEKSWorkerNodePolicy,
     aws_iam_role_policy_attachment.mjs-node-AmazonEKS_CNI_Policy,
     aws_iam_role_policy_attachment.mjs-node-AmazonEC2ContainerRegistryReadOnly,
-
+    aws_iam_role_policy_attachment.mjs-node-AmazonSSMManagedInstanceCor,
   ]
   tags = {
     "Name" = "${aws_eks_cluster.mjs-terraform-eks.name}-mjs-eks-node-group-Node"
     "kubernetes.io/cluster/${aws_eks_cluster.mjs-terraform-eks.name}" = "owned"
-  }
-}
-
-resource "aws_autoscaling_group" "eks-terraform-node-role" {
-  desired_capacity     = 3
-  launch_configuration = "${aws_launch_configuration.eks-terraform-node-role.id}"
-  max_size             = 3
-  min_size             = 1
-  name                 = "eks-terraform-node-role"
-  vpc_zone_identifier  = [aws_subnet.k8s_private_subnet_1.id, aws_subnet.k8s_private_subnet_2.id]
-
-  tag {
-    key                 = "Name"
-    value               = "eks-terraform-node-role"
-    propagate_at_launch = true
-  }
-
-  tag {
-    key                 = "kubernetes.io/cluster/${var.cluster-name}"
-    value               = "owned"
-    propagate_at_launch = true
   }
 }
 
@@ -538,6 +460,11 @@ resource "aws_iam_role_policy_attachment" "mjs-node-AmazonEC2ContainerRegistryRe
   role       = aws_iam_role.eks-terraform-node-role.name
 }
 
+resource "aws_iam_role_policy_attachment" "mjs-node-AmazonSSMManagedInstanceCor" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  role       = aws_iam_role.eks-terraform-node-role.name
+}
+
 resource "aws_iam_instance_profile" "eks-terraform-node-role" {
 	name = "kuber-worker"
 	role = aws_iam_role.eks-terraform-node-role.name
@@ -558,6 +485,88 @@ resource "aws_subnet" "mjs-eks-node-subnet" {
 
   tags = {
     "kubernetes.io/cluster/${aws_eks_cluster.mjs-terraform-eks.name}" = "shared"
+  }
+}
+*/
+
+/*
+data "aws_ami" "latest" {
+  for_each = toset(["1.20", "1.21"])
+
+  owners      = ["000982191218"]
+  most_recent = true
+
+  filter {
+    name = "name"
+    values = [
+      "amazon-eks-node-${each.value}-v*",
+    ]
+  }
+}
+output "latest_instance_ami" {
+  value = {
+    for version, ami in data.aws_ami.latest :
+    version => {
+      id    = ami.id
+      name  = ami.name
+      owner = ami.image_owner_alias
+    }
+  }
+}
+*/
+
+/*
+# This data source is included for ease of sample architecture deployment
+# and can be swapped out as necessary.
+data "aws_region" "current" {}
+
+# EKS currently documents this required userdata for EKS worker nodes to
+# properly configure Kubernetes applications on the EC2 instance.
+# We utilize a Terraform local here to simplify Base64 encoding this
+# information into the AutoScaling Launch Configuration.
+# More information: https://docs.aws.amazon.com/eks/latest/userguide/launch-workers.html
+locals {
+  eks-terraform-node-role-userdata = <<USERDATA
+#!/bin/bash
+set -o xtrace
+/etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.mjs-terraform-eks.endpoint}' --b64-cluster-ca '${aws_eks_cluster.mjs-terraform-eks.certificate_authority.0.data}' '${var.cluster-name}'
+USERDATA
+}
+
+resource "aws_launch_configuration" "eks-terraform-node-role" {
+  associate_public_ip_address = true
+  iam_instance_profile        = "${aws_iam_instance_profile.eks-terraform-node-role.name}"
+  image_id                    = "ami-0073aeb06ceb4b0dc"
+  instance_type               = "m4.large"
+  name_prefix                 = "eks-terraform-node-role"
+  security_groups             = [aws_security_group.mjs-securitygroup.id]
+  user_data_base64            = "${base64encode(local.eks-terraform-node-role-userdata)}"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+*/
+
+/*
+resource "aws_autoscaling_group" "eks-terraform-node-role" {
+  desired_capacity     = 3
+  launch_configuration = "${aws_launch_configuration.eks-terraform-node-role.id}"
+  max_size             = 3
+  min_size             = 1
+  name                 = "eks-terraform-node-role"
+  vpc_zone_identifier  = [aws_subnet.k8s_private_subnet_1.id, aws_subnet.k8s_private_subnet_2.id]
+
+  tag {
+    key                 = "Name"
+    value               = "eks-terraform-node-role"
+    propagate_at_launch = true
+  }
+
+  tag {
+    key                 = "kubernetes.io/cluster/${var.cluster-name}"
+    value               = "owned"
+    propagate_at_launch = true
   }
 }
 */
