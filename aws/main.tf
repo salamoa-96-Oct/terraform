@@ -4,6 +4,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "4.2.0"
     }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "2.9.0"
+    }
   }
 
   required_version = ">= 0.14.9"
@@ -238,6 +242,33 @@ resource "aws_instance" "mjs-bastion" {
     Name = "${var.ec2_name}-bastion"
   }
 }
+provider "kubernetes" {
+  host                   = aws_eks_cluster.mjs-terraform-eks.endpoint
+  cluster_ca_certificate = base64decode(aws_eks_cluster.mjs-terraform-eks.certificate_authority[0].data)
+  token                  = data.aws_eks_cluster_auth.eks-auth.token
+}
+data "aws_eks_cluster_auth" "eks-auth" {
+  name = "mjs-terraform-eks"
+  
+}
+resource "kubernetes_config_map" "kubernetes-config" {
+  metadata {
+    name = "kubernetes-config"
+    namespace = "kube-system"
+  }
+
+  data = {
+   mapRoles = yamlencode(
+    [
+      {
+        rolearn = aws_iam_role.eks-terraform-node-role.arn
+        username = "system:node:{{EC2PrivateDNSName}}"
+        groups  = ["system:bootstrappers", "system:nodes"]
+      }
+    ]       
+  )
+}
+}
 
 ################ EKS 구축 ##################
 resource "aws_eks_cluster" "mjs-terraform-eks" {
@@ -355,7 +386,7 @@ resource "aws_iam_role" "mjs_assume_role" {
   name               = "mjs_assume_role"
 }
 */
-
+/*
 locals {
   kubeconfig = <<KUBECONFIG
 
@@ -390,6 +421,7 @@ KUBECONFIG
 output "kubeconfig" {
   value = "${local.kubeconfig}"
 }
+*/
 
 ################### EKS Node-Group ########################
 resource "aws_eks_node_group" "mjs-eks-node-group" {
