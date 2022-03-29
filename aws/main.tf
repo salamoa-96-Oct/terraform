@@ -65,10 +65,7 @@ resource "aws_nat_gateway" "mjs-nat" {
 resource "aws_route_table" "mjs-public-rt" {
   vpc_id = aws_vpc.mjs-vpc.id
 
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.mjs-igw.id
-  }
+  route = []
 
   tags = {
     Owner = "mjs"
