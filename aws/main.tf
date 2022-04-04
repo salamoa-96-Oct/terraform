@@ -50,22 +50,37 @@ resource "aws_internet_gateway" "mjs-igw" {
 resource "aws_eip" "bastion-eip" {
   instance = aws_instance.mjs-bastion.id
   vpc      = true
+
+  tags = {
+    "Name" = "Bastion-eip"
+  }
 }
 
+################# nat-eip #################
+resource "aws_eip" "nat-eip" {
+  vpc      = true
+
+  tags = {
+    "Name" = "Nat-eip"
+  }
+}
 
 ################# nat gateway ################
 resource "aws_nat_gateway" "mjs-nat" {
-  connectivity_type = "private"
-  subnet_id         = "aws_subnet.k8s_private_subnet_1.id"
+  #connectivity_type = "public"
+  allocation_id     = aws_eip.nat-eip.id
+  subnet_id         = "aws_subnet.k8s_public_subnet_1.id"
 }
-
 
 ################# Routing table #################
 
 resource "aws_route_table" "mjs-public-rt" {
   vpc_id = aws_vpc.mjs-vpc.id
 
-  route = []
+  route {
+    cidr_block = "0.0.0.0/0"
+    nat_gateway_id = aws_internet_gateway.mjs-igw.id
+  }
 
   tags = {
     Owner = "mjs"
@@ -76,9 +91,10 @@ resource "aws_route_table" "mjs-public-rt" {
 
 resource "aws_route_table" "mjs-pri-rt" {
   vpc_id = aws_vpc.mjs-vpc.id
+
   route {
     cidr_block = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.mjs-nat.id
+    gateway_id = aws_nat_gateway.mjs-nat.id
   }
   tags = {
     Owner = "mjs"
@@ -141,6 +157,7 @@ data "aws_availability_zones" "available" {
 resource "aws_subnet" "k8s_private_subnet_1" {
   vpc_id                  = aws_vpc.mjs-vpc.id
   cidr_block              = var.aws_vpc_subnet_cidrs["private_1"]
+  map_public_ip_on_launch = false
   availability_zone       = "${data.aws_availability_zones.available.names[0]}"
   tags = {
     Owner   = "${var.owner}"
@@ -169,6 +186,7 @@ resource "aws_subnet" "k8s_public_subnet_1" {
 resource "aws_subnet" "k8s_private_subnet_2" {
   vpc_id                  = aws_vpc.mjs-vpc.id
   cidr_block              = var.aws_vpc_subnet_cidrs["private_2"]
+  map_public_ip_on_launch = false
   availability_zone       = "${data.aws_availability_zones.available.names[1]}"
   tags = {
     Owner   = "${var.owner}"
@@ -203,6 +221,7 @@ resource "aws_route_table_association" "k8s_public_association_2" {
   subnet_id      = aws_subnet.k8s_public_subnet_2.id
   route_table_id = aws_route_table.mjs-public-rt.id
 }
+
 resource "aws_route_table_association" "k8s_private_association_1" {
   subnet_id      = aws_subnet.k8s_private_subnet_1.id
   route_table_id = aws_route_table.mjs-pri-rt.id
@@ -211,6 +230,7 @@ resource "aws_route_table_association" "k8s_private_association_2" {
   subnet_id      = aws_subnet.k8s_private_subnet_2.id
   route_table_id = aws_route_table.mjs-pri-rt.id
 }
+
 ############### key Pair ################
 resource "aws_key_pair" "aws_key" {
   key_name = var.ssh_key_name
@@ -220,7 +240,7 @@ resource "aws_key_pair" "aws_key" {
 ############### EC2 ##################
 resource "aws_instance" "mjs-bastion" {
   ami           = var.instance_ami
-  instance_type = var.instance_type
+  instance_type = var.instance_type_bastion
   key_name      = var.ssh_key_name
 
   associate_public_ip_address = true
@@ -359,7 +379,7 @@ resource "aws_iam_openid_connect_provider" "mjs-eks-provider" {
   url             = aws_eks_cluster.mjs-terraform-eks.identity[0].oidc[0].issuer
 }
 
-/*            IRSA 전용
+
 data "aws_iam_policy_document" "mjs_assume_role_policy" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -382,8 +402,7 @@ resource "aws_iam_role" "mjs_assume_role" {
   assume_role_policy = data.aws_iam_policy_document.mjs_assume_role_policy.json
   name               = "mjs_assume_role"
 }
-*/
-/*
+
 locals {
   kubeconfig = <<KUBECONFIG
 
@@ -418,7 +437,6 @@ KUBECONFIG
 output "kubeconfig" {
   value = "${local.kubeconfig}"
 }
-*/
 
 ################### EKS Node-Group ########################
 resource "aws_eks_node_group" "mjs-eks-node-group" {
@@ -495,7 +513,7 @@ resource "aws_iam_role_policy_attachment" "mjs-node-AmazonSSMManagedInstanceCor"
 }
 
 resource "aws_iam_instance_profile" "eks-terraform-node-role" {
-	name = "kuber-worker"
+	name = "kube-worker"
 	role = aws_iam_role.eks-terraform-node-role.name
 }
 

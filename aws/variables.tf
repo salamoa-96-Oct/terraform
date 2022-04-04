@@ -16,7 +16,7 @@ variable "instance_ami" {
   default     = "ami-0c02fb55956c7d316"
 }
 
-variable "instance_type" {
+variable "instance_type_bastion" {
   default = "t2.medium"
 }
 
