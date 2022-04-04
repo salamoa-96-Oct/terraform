@@ -69,7 +69,7 @@ resource "aws_eip" "nat-eip" {
 resource "aws_nat_gateway" "mjs-nat" {
   #connectivity_type = "public"
   allocation_id     = aws_eip.nat-eip.id
-  subnet_id         = "aws_subnet.k8s_public_subnet_1.id"
+  subnet_id         = aws_subnet.k8s_public_subnet_1.id
 }
 
 ################# Routing table #################
@@ -79,7 +79,7 @@ resource "aws_route_table" "mjs-public-rt" {
 
   route {
     cidr_block = "0.0.0.0/0"
-    nat_gateway_id = aws_internet_gateway.mjs-igw.id
+    gateway_id = aws_internet_gateway.mjs-igw.id
   }
 
   tags = {
@@ -91,16 +91,22 @@ resource "aws_route_table" "mjs-public-rt" {
 
 resource "aws_route_table" "mjs-pri-rt" {
   vpc_id = aws_vpc.mjs-vpc.id
-
+/*
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_nat_gateway.mjs-nat.id
   }
+  */
   tags = {
     Owner = "mjs"
     Name = "mjs_pri_rt"
     Service = "k8s_mjs"
   }
+}
+resource "aws_route" "mjs-pri-r" {
+  route_table_id = aws_route_table.mjs-pri-rt.id 
+  destination_cidr_block = "0.0.0.0/0" 
+  nat_gateway_id = aws_nat_gateway.mjs-nat.id
 }
 
 ################## Security Group ######################
@@ -467,6 +473,7 @@ resource "aws_eks_node_group" "mjs-eks-node-group" {
     aws_iam_role_policy_attachment.mjs-node-AmazonEKS_CNI_Policy,
     aws_iam_role_policy_attachment.mjs-node-AmazonEC2ContainerRegistryReadOnly,
     aws_iam_role_policy_attachment.mjs-node-AmazonSSMManagedInstanceCor,
+    aws_nat_gateway.mjs-nat
   ]
   tags = {
     "Name" = "${aws_eks_cluster.mjs-terraform-eks.name}-mjs-eks-node-group-Node"
