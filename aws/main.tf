@@ -185,6 +185,7 @@ resource "aws_subnet" "k8s_public_subnet_1" {
     Name    = "mjs-publicsubnet-1"
     Service = "k8s_example"
     "kubernetes.io/role/elb" = "1" 
+    "kubernetes.io/cluster/mjs-terraform-eks" = "shared"
     
   }
 }
@@ -193,7 +194,7 @@ resource "aws_subnet" "k8s_private_subnet_2" {
   vpc_id                  = aws_vpc.mjs-vpc.id
   cidr_block              = var.aws_vpc_subnet_cidrs["private_2"]
   map_public_ip_on_launch = false
-  availability_zone       = "${data.aws_availability_zones.available.names[1]}"
+  availability_zone       = "${data.aws_availability_zones.available.names[2]}"
   tags = {
     Owner   = "${var.owner}"
     Name    = "mjs-private-subnet-2"
@@ -208,12 +209,13 @@ resource "aws_subnet" "k8s_public_subnet_2" {
   vpc_id                  = aws_vpc.mjs-vpc.id
   cidr_block              = var.aws_vpc_subnet_cidrs["public_2"]
   map_public_ip_on_launch = true
-  availability_zone       = "${data.aws_availability_zones.available.names[1]}"
+  availability_zone       = "${data.aws_availability_zones.available.names[2]}"
   tags = {
     Owner   = "${var.owner}"
     Name    = "mjs-public-subnet-2"
     Service = "k8s_example"
     "kubernetes.io/role/elb" = "1"
+    "kubernetes.io/cluster/mjs-terraform-eks" = "shared"
   }
 }
 
