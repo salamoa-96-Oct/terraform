@@ -18,6 +18,11 @@ variable "instance_ami" {
 
 variable "instance_type_bastion" {
   default = "t2.medium"
+  type = string
+}
+
+variable "instance_type_node_group" {
+  default = ["t3.xlarge"]
 }
 
 variable "owner" {

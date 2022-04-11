@@ -453,7 +453,7 @@ resource "aws_eks_node_group" "mjs-eks-node-group" {
   node_role_arn   = aws_iam_role.eks-terraform-node-role.arn
   #security_group_ids = aws_security_group.mjs-securitygroup.id
   subnet_ids      = [aws_subnet.k8s_private_subnet_1.id, aws_subnet.k8s_private_subnet_2.id]
-  #instance_types  = "t2.xlarge"
+  instance_types  = var.instance_type_node_group
 
   scaling_config {
     desired_size = 1
